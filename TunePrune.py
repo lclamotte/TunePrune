@@ -1,7 +1,7 @@
-
-
+from collections import defaultdict
 import json
 import requests
+from bs4 import BeautifulSoup
 from collections import Counter
 
 def run():
@@ -10,14 +10,14 @@ def run():
     client_access_token = "4Wthx9BGZ6-kzb1Ret-lEupMLEfc3dIl9lR-W5Kw3hPeM7_pjAhdvdBONmffVZaR"
 
     tunePrune = TunePrune(client_id, client_secret, client_access_token)
-    artist_name = "Drake"
+    artist_name = "Gunna"
     artist_id = tunePrune.get_artist_id(artist_name)
     top_songs = tunePrune.get_top_songs(artist_id)
-    print ()
-    print ("Top songs for " + artist_name + " are: ")
+    top_songs.append(Song(5592325, "Top Floor"))
     for song in top_songs:
-        print (song.song_title)
-
+        print()
+        print("Song: " + song.song_title)
+        tunePrune.get_lyrics(song.song_id, artist_name)
 class TunePrune():
     def __init__(self, client_id, client_secret, client_access_token):
         self.client_id = client_id
@@ -34,7 +34,7 @@ class TunePrune():
                 return hit["result"]["primary_artist"]["id"]
 
     def get_top_songs(self, artist_id):
-        url = "https://api.genius.com/artists/" + str(artist_id) + "/songs?access_token=CLIENT_ACCESS_TOKEN&sort=popularity"
+        url = "https://api.genius.com/artists/" + str(artist_id) + "/songs?access_token=CLIENT_ACCESS_TOKEN&per_page=50&sort=popularity"
         response = self.call_endpoint(url)
         songs = []
         for song_info in response["response"]["songs"]:
@@ -44,6 +44,44 @@ class TunePrune():
             songs.append(song)
         return songs
 
+    def get_lyrics(self, song_id, artist_name):
+        url = "https://api.genius.com/songs/" + str(song_id) + "/?access_token=CLIENT_ACCESS_TOKEN"
+        response = self.call_endpoint(url)
+        path = response["response"]["song"]["path"]
+        page_url = "http://genius.com" + path
+        page = requests.get(page_url)
+        html = BeautifulSoup(page.text, "html.parser")
+        #remove script tags that they put in the middle of the lyrics
+        [h.extract() for h in html('script')]
+        #at least Genius is nice and has a tag called 'lyrics'!
+        lyrics = html.find("div", class_="lyrics").get_text() #updated css where the lyrics are based in HTML
+        isVerseByArist = False
+        checkForA = False
+        checkIdentity = False
+        for line in lyrics.split('\n'):
+            if "[" in line and ":" in line and "]" in line:
+                if artist_name in line:
+                    isVerseByArist = True
+                else:
+                    isVerseByArist = False
+                continue
+            
+            if isVerseByArist:
+                for word in line.split(' '):
+                    if word == "I'm":
+                        checkForA = True
+                        continue
+                    if checkForA and word == "a":
+                        checkForA = False
+                        checkIdentity = True
+                        continue
+                    elif checkForA:
+                        checkForA = False
+                        continue
+                    if checkIdentity:
+                        print (line)
+                        checkIdentity = False
+                        checkForA = False
     def call_endpoint(self, url):
         url = url.replace("CLIENT_ACCESS_TOKEN", self.client_access_token)
         raw_response = requests.get(url)
