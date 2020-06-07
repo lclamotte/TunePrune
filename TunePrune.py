@@ -1,8 +1,7 @@
-from collections import defaultdict
+from bs4 import BeautifulSoup
+from collections import defaultdict, Counter
 import json
 import requests
-from bs4 import BeautifulSoup
-from collections import Counter
 
 def run():
     client_id = "5TRar6_l7ibdD4EQdsGR_nvPBObMWgOkV_SJcPO38tIw3-9KkTGt8D0i5iYUGQ7D"
@@ -18,6 +17,7 @@ def run():
         print()
         print("Song: " + song.song_title)
         tunePrune.get_lyrics(song.song_id, artist_name)
+
 class TunePrune():
     def __init__(self, client_id, client_secret, client_access_token):
         self.client_id = client_id
@@ -82,6 +82,7 @@ class TunePrune():
                         print (line)
                         checkIdentity = False
                         checkForA = False
+                        
     def call_endpoint(self, url):
         url = url.replace("CLIENT_ACCESS_TOKEN", self.client_access_token)
         raw_response = requests.get(url)
